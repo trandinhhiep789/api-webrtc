@@ -1,4 +1,6 @@
 const express = require("express");
+const cors = require('cors')
+
 
 var io = require("socket.io")({
   path: "/webrtc",
@@ -9,6 +11,7 @@ var io = require("socket.io")({
 });
 
 const app = express();
+app.use(cors())
 const port = 8080;
 
 // chạy front end
