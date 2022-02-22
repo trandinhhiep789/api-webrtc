@@ -12,7 +12,7 @@ var io = require("socket.io")({
 
 const app = express();
 app.use(cors())
-const port = 8080;
+const port = process.env.PORT || 8080;
 
 // chạy front end
 app.use(express.static(__dirname + "/build"));
