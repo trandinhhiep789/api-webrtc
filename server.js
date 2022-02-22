@@ -15,10 +15,10 @@ app.use(cors())
 const port = process.env.PORT || 8080;
 
 // chạy front end
-app.use(express.static(__dirname + "/build"));
-app.get("/", (req, res, next) => {
-  res.sendFile(__dirname + "/build/index.html");
-});
+// app.use(express.static(__dirname + "/build"));
+// app.get("/", (req, res, next) => {
+//   res.sendFile(__dirname + "/build/index.html");
+// });
 
 const server = app.listen(port, () => console.log("App listen", port));
 
