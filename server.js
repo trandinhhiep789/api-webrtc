@@ -1,181 +1,183 @@
-// const express = require("express");
-// const cors = require('cors')
+const express = require("express");
+const cors = require('cors')
 
+
+var io = require("socket.io")({
+  path: "/webrtc",
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
+const app = express();
+app.use(cors())
+const port = process.env.PORT || 8080;
+const server = app.listen(port, () => console.log("App listen", port));
+
+io.listen(server);
+
+const peers = io.of("/webrtcPeer");
+
+let connectedPeers = new Map();
+
+peers.on("connection", (socket) => {
+  console.log("SocketID", socket.id);
+  socket.emit("connection-success", { success: socket.id });
+
+  connectedPeers.set(socket.id, socket);
+  socket.on("disconnect", () => {
+    console.log("disconnected");
+    connectedPeers.delete(socket.id);
+  });
+
+  socket.on("offerOrAnswer", (data) => {
+    socket.to(data.idtocal).emit("offerOrAnswer", data.payload, data.yourid);
+  });
+
+  socket.on("candidate", (data) => {
+    // gửi candidate cho người khác nếu có
+    for (const [socketID, socket] of connectedPeers.entries()) {
+      // không tự gửi cho mình
+      if (socketID !== data.socketID) {
+        console.log(socketID, data.payload.type);
+        socket.emit("candidate", data.payload);
+      }
+    }
+  });
+});
+
+
+// ================== CALL 1-N =====================
+
+
+// const express = require('express')
+// const cors = require('cors')
+// const app = express()
+// app.use(cors())
 
 // var io = require("socket.io")({
-//   path: "/webrtc",
+//   path: "/io/webrtc",
 //   cors: {
 //     origin: "*",
 //     methods: ["GET", "POST"],
 //   },
 // });
 
-// const app = express();
-// app.use(cors())
+// // var io = require('socket.io')
+// //   ({
+// //     path: '/io/webrtc'
+// //   })
+
 // const port = process.env.PORT || 8080;
 
-// // chạy front end
-// // app.use(express.static(__dirname + "/build"));
-// // app.get("/", (req, res, next) => {
-// //   res.sendFile(__dirname + "/build/index.html");
-// // });
+// // app.get('/', (req, res) => res.send('Hello World!!!!!'))
 
-// const server = app.listen(port, () => console.log("App listen", port));
+// //https://expressjs.com/en/guide/writing-middleware.html
+// // app.use(express.static(__dirname + '/build'))
+// // app.get('/', (req, res, next) => {
+// //     res.sendFile(__dirname + '/build/index.html')
+// // })
 
-// io.listen(server);
+// const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`))
 
-// const peers = io.of("/webrtcPeer");
+// io.listen(server)
 
-// let connectedPeers = new Map();
-
-// peers.on("connection", (socket) => {
-//   console.log("SocketID", socket.id);
-//   socket.emit("connection-success", { success: socket.id });
-
-//   connectedPeers.set(socket.id, socket);
-//   socket.on("disconnect", () => {
-//     console.log("disconnected");
-//     connectedPeers.delete(socket.id);
-//   });
-
-//   socket.on("offerOrAnswer", (data) => {
-//     socket.to(data.idtocal).emit("offerOrAnswer", data.payload, data.yourid);
-//   });
-
-//   socket.on("candidate", (data) => {
-//     // gửi candidate cho người khác nếu có
-//     for (const [socketID, socket] of connectedPeers.entries()) {
-//       // không tự gửi cho mình
-//       if (socketID !== data.socketID) {
-//         console.log(socketID, data.payload.type);
-//         socket.emit("candidate", data.payload);
-//       }
-//     }
-//   });
-// });
-
-
-// ================== CALL 1-N =====================
-
-const express = require('express')
-const cors = require('cors')
-
-var io = require('socket.io')
-  ({
-    path: '/io/webrtc'
-  })
-
-const app = express()
-app.use(cors())
-const port = process.env.PORT || 8080
-
-// app.get('/', (req, res) => res.send('Hello World!!!!!'))
-
-//https://expressjs.com/en/guide/writing-middleware.html
-// app.use(express.static(__dirname + '/build'))
-// app.get('/', (req, res, next) => {
-//     res.sendFile(__dirname + '/build/index.html')
+// // default namespace
+// io.on('connection', socket => {
+//   console.log('connected')
 // })
 
-const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`))
+// // https://www.tutorialspoint.com/socket.io/socket.io_namespaces.htm
+// const peers = io.of('/webrtcPeer')
 
-io.listen(server)
+// // keep a reference of all socket connections
+// let connectedPeers = new Map()
 
-// default namespace
-io.on('connection', socket => {
-  console.log('connected')
-})
+// peers.on('connection', socket => {
 
-// https://www.tutorialspoint.com/socket.io/socket.io_namespaces.htm
-const peers = io.of('/webrtcPeer')
+//   connectedPeers.set(socket.id, socket)
 
-// keep a reference of all socket connections
-let connectedPeers = new Map()
+//   console.log(socket.id)
+//   socket.emit('connection-success', {
+//     success: socket.id,
+//     peerCount: connectedPeers.size,
+//   })
 
-peers.on('connection', socket => {
+//   const broadcast = () => socket.broadcast.emit('joined-peers', {
+//     peerCount: connectedPeers.size,
+//   })
+//   broadcast()
 
-  connectedPeers.set(socket.id, socket)
+//   const disconnectedPeer = (socketID) => socket.broadcast.emit('peer-disconnected', {
+//     peerCount: connectedPeers.size,
+//     socketID: socketID
+//   })
 
-  console.log(socket.id)
-  socket.emit('connection-success', {
-    success: socket.id,
-    peerCount: connectedPeers.size,
-  })
+//   socket.on('disconnect', () => {
+//     console.log('disconnected')
+//     connectedPeers.delete(socket.id)
+//     disconnectedPeer(socket.id)
+//   })
 
-  const broadcast = () => socket.broadcast.emit('joined-peers', {
-    peerCount: connectedPeers.size,
-  })
-  broadcast()
+//   socket.on('onlinePeers', (data) => {
+//     for (const [socketID, _socket] of connectedPeers.entries()) {
+//       // don't send to self
+//       if (socketID !== data.socketID.local) {
+//         console.log('online-peer', data.socketID, socketID)
+//         socket.emit('online-peer', socketID)
+//       }
+//     }
+//   })
 
-  const disconnectedPeer = (socketID) => socket.broadcast.emit('peer-disconnected', {
-    peerCount: connectedPeers.size,
-    socketID: socketID
-  })
+//   socket.on('offer', data => {
+//     for (const [socketID, socket] of connectedPeers.entries()) {
+//       // don't send to self
+//       if (socketID === data.socketID.remote) {
+//         // console.log('Offer', socketID, data.socketID, data.payload.type)
+//         socket.emit('offer', {
+//           sdp: data.payload,
+//           socketID: data.socketID.local
+//         }
+//         )
+//       }
+//     }
+//   })
 
-  socket.on('disconnect', () => {
-    console.log('disconnected')
-    connectedPeers.delete(socket.id)
-    disconnectedPeer(socket.id)
-  })
+//   socket.on('answer', (data) => {
+//     for (const [socketID, socket] of connectedPeers.entries()) {
+//       if (socketID === data.socketID.remote) {
+//         console.log('Answer', socketID, data.socketID, data.payload.type)
+//         socket.emit('answer', {
+//           sdp: data.payload,
+//           socketID: data.socketID.local
+//         }
+//         )
+//       }
+//     }
+//   })
 
-  socket.on('onlinePeers', (data) => {
-    for (const [socketID, _socket] of connectedPeers.entries()) {
-      // don't send to self
-      if (socketID !== data.socketID.local) {
-        console.log('online-peer', data.socketID, socketID)
-        socket.emit('online-peer', socketID)
-      }
-    }
-  })
+//   // socket.on('offerOrAnswer', (data) => {
+//   //   // send to the other peer(s) if any
+//   //   for (const [socketID, socket] of connectedPeers.entries()) {
+//   //     // don't send to self
+//   //     if (socketID !== data.socketID) {
+//   //       console.log(socketID, data.payload.type)
+//   //       socket.emit('offerOrAnswer', data.payload)
+//   //     }
+//   //   }
+//   // })
 
-  socket.on('offer', data => {
-    for (const [socketID, socket] of connectedPeers.entries()) {
-      // don't send to self
-      if (socketID === data.socketID.remote) {
-        // console.log('Offer', socketID, data.socketID, data.payload.type)
-        socket.emit('offer', {
-          sdp: data.payload,
-          socketID: data.socketID.local
-        }
-        )
-      }
-    }
-  })
+//   socket.on('candidate', (data) => {
+//     // send candidate to the other peer(s) if any
+//     for (const [socketID, socket] of connectedPeers.entries()) {
+//       if (socketID === data.socketID.remote) {
+//         socket.emit('candidate', {
+//           candidate: data.payload,
+//           socketID: data.socketID.local
+//         })
+//       }
+//     }
+//   })
 
-  socket.on('answer', (data) => {
-    for (const [socketID, socket] of connectedPeers.entries()) {
-      if (socketID === data.socketID.remote) {
-        console.log('Answer', socketID, data.socketID, data.payload.type)
-        socket.emit('answer', {
-          sdp: data.payload,
-          socketID: data.socketID.local
-        }
-        )
-      }
-    }
-  })
-
-  // socket.on('offerOrAnswer', (data) => {
-  //   // send to the other peer(s) if any
-  //   for (const [socketID, socket] of connectedPeers.entries()) {
-  //     // don't send to self
-  //     if (socketID !== data.socketID) {
-  //       console.log(socketID, data.payload.type)
-  //       socket.emit('offerOrAnswer', data.payload)
-  //     }
-  //   }
-  // })
-
-  socket.on('candidate', (data) => {
-    // send candidate to the other peer(s) if any
-    for (const [socketID, socket] of connectedPeers.entries()) {
-      if (socketID === data.socketID.remote) {
-        socket.emit('candidate', {
-          candidate: data.payload,
-          socketID: data.socketID.local
-        })
-      }
-    }
-  })
-
-})
+// })
